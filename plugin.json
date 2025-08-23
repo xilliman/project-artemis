@@ -1,11 +1,11 @@
 {
-    "name": "Project Artemis",
-    "author": "Maximilian Kuhlmay",
-    "flags": ["debug", "root"],
-    "api_version": 1,
-    "publish": {
-        "tags": ["template", "root"],
-        "description": "Project Artemis Description",
-        "image": "https://opengraph.githubassets.com/1/xilliman/project-artemis"
-    }
+  "name": "project-artemis",
+  "author": "John Doe",
+  "flags": ["debug", "_root"],
+  "api_version": 1,
+  "publish": {
+    "tags": ["template", "root"],
+    "description": "project-artemis",
+    "image": "https://opengraph.githubassets.com/1/xilliman/project-artemis"
+  }
 }
