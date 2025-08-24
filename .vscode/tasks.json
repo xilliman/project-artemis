@@ -1,192 +1,257 @@
 {
     "version": "2.0.0",
     "tasks": [
-        //PRELIMINARY SETUP TASKS
-        //Dependency setup task
         {
-            "label": "depsetup",
-            "type": "shell",
-            "group": "none",
-            "detail": "Install depedencies for basic setup",
-            "command": "${workspaceFolder}/.vscode/setup.sh",
-            // // placeholder for windows scripts, not currently planned
-            // "windows": {
-            //     "command": "call -c ${workspaceFolder}\\.vscode\\setup.bat",
-            // },
-            "problemMatcher": []
-        },
-        //pnpm setup task to grab all needed modules
-        {
-            "label": "pnpmsetup",
-            "type": "shell",
-            "group": "none",
-            "detail": "Setup pnpm",
-            "command": "which pnpm && pnpm i",
-            "problemMatcher": []
-        },
-        //Preliminary "All-in-one" setup task
-        {
-            "label": "setup",
-            "detail": "Set up depedencies, pnpm and update Decky Frontend Library.",
+            "label": "dev:setup",
+            "detail": "Set up dependencies, pnpm and update @decky/ui",
             "dependsOrder": "sequence",
             "dependsOn": [
-                "depsetup",
-                "pnpmsetup",
-                "updatefrontendlib"
+                "setup:deps",
+                "setup:pnpm"
             ],
             "problemMatcher": []
         },
-        //Preliminary Deploy Config Setup
         {
-            "label": "settingscheck",
-            "type": "shell",
-            "group": "none",
-            "detail": "Check that settings.json has been created",
-            "command": "${workspaceFolder}/.vscode/config.sh",
-            // // placeholder for windows scripts, not currently planned
-            // "windows": {
-            //     "command": "call ${workspaceFolder}\\.vscode\\config.bat",
-            // },
+            "label": "dev:build",
+            "detail": "Builds plugin",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "dev:setup",
+                "misc:check-settings",
+                "dev:build-cli"
+            ],
             "problemMatcher": []
         },
-        //BUILD TASKS
         {
-            "label": "cli-build",
+            "label": "dev:deploy",
+            "detail": "Deploys plugin to SteamDeck",
             "group": "build",
-            "detail": "Build plugin with CLI",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "deploy:copy-zip",
+                "deploy:move-to-plugins",
+                "deploy:extract-zip",
+                "deploy:remove-zip",
+                "deploy:restore-permissions"
+            ],
+            "problemMatcher": [],
+            "command": ""
+        },
+        {
+            "label": "dev:build-cli",
+            "detail": "Build plugin with decky-cli",
+            "group": "build",
+            "type": "shell",
             "command": "${workspaceFolder}/.vscode/build.sh",
-            // // placeholder for windows logic, not currently planned
-            // "windows": {
-            //     "command": "call ${workspaceFolder}\\.vscode\\build.bat",
-            // },
             "problemMatcher": []
         },
-        //"All-in-one" build task
         {
-            "label": "build",
-            "group": "build",
-            "detail": "Build decky-plugin-template",
-            "dependsOrder": "sequence",
-            "dependsOn": [
-                "setup",
-                "settingscheck",
-                "cli-build",
-            ],
-            "problemMatcher": []
-        },
-        //DEPLOY TASKS
-        //Copies the zip file of the built plugin to the plugins folder
-        {
-            "label": "copyzip",
-            "detail": "Deploy plugin zip to tmp in deck",
+            "label": "deploy:copy-zip",
+            "detail": "Deploy plugibn zip to /tmp",
             "type": "shell",
             "group": "none",
             "dependsOn": [
-                "chmodplugins"
+                "misc:chown-plugins"
             ],
             "command": "rsync -azp --chmod=D0755,F0755 --rsh='ssh -p ${config:deckport} ${config:deckkey}' dist/ ${config:deckuser}@${config:deckip}:/tmp/plugins-tmp",
             "problemMatcher": []
         },
         {
-            "label": "movetoplugins",
-            "detail": "Move plugin zip from tmp to plugins in deck",
+            "label": "deploy:move-zip-to-plugins",
+            "detail": "Move plugin zip from /tmp to plugins",
             "type": "shell",
             "group": "none",
             "dependsOn": [
-                "copyzip"
+                "deploy:copy-zip"
             ],
             "command": "ssh -p ${config:deckport} ${config:deckkey} ${config:deckuser}@${config:deckip} \"echo ${config:deckpass} | sudo -S mkdir -p '${config:deckdir}/homebrew/plugins' && echo ${config:deckpass} | sudo -S mv /tmp/plugins-tmp/* '${config:deckdir}/homebrew/plugins/'\"",
             "problemMatcher": []
         },
-        //
         {
-            "label": "extractzip",
-            "detail": "",
-            "type": "shell",
+            "label": "deploy:extract-zip",
+            "detail": "Extracts zip on deck",
             "group": "none",
+            "type": "shell",
             "command": "echo '${config:deckdir}/homebrew/plugins/${config:pluginname}.zip' && ssh ${config:deckuser}@${config:deckip} -p ${config:deckport} ${config:deckkey} 'echo ${config:deckpass} | sudo -S mkdir -m 755 -p \"$(echo \"${config:deckdir}/homebrew/plugins/${config:pluginname}\" | sed \"s| |-|g\")\" && echo ${config:deckpass} | sudo -S chown ${config:deckuser}:${config:deckuser} \"$(echo \"${config:deckdir}/homebrew/plugins/${config:pluginname}\" | sed \"s| |-|g\")\" && echo ${config:deckpass} | sudo -S bsdtar -xzpf \"${config:deckdir}/homebrew/plugins/${config:pluginname}.zip\" -C \"$(echo \"${config:deckdir}/homebrew/plugins/${config:pluginname}\" | sed \"s| |-|g\")\" --strip-components=1 --fflags '",
             "problemMatcher": []
         },
         {
-            "label": "removezip",
+            "label": "deploy:remove-zip",
             "detail": "Remove plugin zip from deck",
             "type": "shell",
             "group": "none",
             "command": "echo '${config:deckdir}/homebrew/plugins/${config:pluginname}.zip' && ssh ${config:deckuser}@${config:deckip} -p ${config:deckport} ${config:deckkey} 'echo ${config:deckpass} | sudo -S rm -f \"${config:deckdir}/homebrew/plugins/${config:pluginname}.zip\"'",
             "problemMatcher": []
-        },
-        {
-            "label": "restoreperms",
-            "detail": "Restores permissions and ownership for plugin folder and files in deck",
+        }, {
+            "label": "deploy:restore-permissions",
+            "detail": "Restores permissions and owership for plugin folder and files in deck",
             "type": "shell",
             "group": "none",
             "command": "ssh ${config:deckuser}@${config:deckip} -p ${config:deckport} ${config:deckkey} 'PLUGIN_DIR=\"$(echo \"${config:deckdir}/homebrew/plugins/${config:pluginname}\" | sed \"s| |-|g\")\" && echo ${config:deckpass} | sudo -S chmod -R 775 \"$PLUGIN_DIR\" && echo ${config:deckpass} | sudo -S chown -R ${config:deckuser}:${config:deckuser} \"$PLUGIN_DIR\" && echo ${config:deckpass} | sudo -S chown root:root \"$PLUGIN_DIR\" && echo ${config:deckpass} | sudo -S chown root:root \"$PLUGIN_DIR/plugin.json\"'",
             "problemMatcher": []
         },
         {
-            "label": "restartdecky",
-            "detail": "",
+            "label": "setup:deps", 
+            "detail": "Installs required tools for basic setup",
+            "group": "none",
             "type": "shell",
-            "group": "none",
-            "command": "ssh ${config:deckuser}@${config:deckip} -p ${config:deckport} ${config:deckkey} 'echo ${config:deckpass} | sudo -S systemctl restart plugin_loader.service'",
-            "problemMatcher": []
+            "command": "${workspaceFolder}/.vscode/setup.sh"
         },
-        //"All-in-one" deploy task
         {
-            "label": "deploy",
-            "dependsOrder": "sequence",
+            "label": "setup:pnpm",
+            "detail": "Sets pnpm up and installs dependencies",
             "group": "none",
-            "dependsOn": [
-                "copyzip",
-                "movetoplugins",
-                "extractzip",
-                "restoreperms"
-            ],
-            "problemMatcher": []
-        },
-        //"All-in-on" build & deploy task
-        {
-            "label": "builddeploy",
-            "detail": "Builds plugin and deploys to deck",
-            "dependsOrder": "sequence",
-            "group": "none",
-            "dependsOn": [
-                "build",
-                "deploy",
-            ],
-            "problemMatcher": []
-        },
-        //"All-in-on" build & deploy & restartdecky task
-        {
-            "label": "builddeployrestart",
-            "detail": "Builds plugin, deploys to deck and restart decky",
-            "dependsOrder": "sequence",
-            "group": "none",
-            "dependsOn": [
-                "build",
-                "deploy",
-                "restartdecky"
-            ],
-            "problemMatcher": []
-        },
-        //GENERAL TASKS
-        //Update Decky Frontend Library, aka DFL
-        {
-            "label": "updatefrontendlib",
             "type": "shell",
+            "command": "which pnpm && pnpm i",
+            "problemMatcher": []
+        },
+        {
+            "label": "dependencies:update-frontend-lib",
+            "detail": "Updated decky-frontend-library (@decky/ui) to latest version",
             "group": "build",
-            "detail": "Update @decky/ui aka DFL",
+            "type": "shell",
             "command": "pnpm update @decky/ui --latest",
             "problemMatcher": []
         },
-        //Used chmod plugins folder to allow copy-over of files
         {
-            "label": "chmodplugins",
-            "detail": "chmods plugins folder to prevent perms issues",
+            "label": "misc:chown-plugins",
+            "detail": "Changes chown to prevent permission issues",
             "type": "shell",
             "group": "none",
             "command": "ssh ${config:deckuser}@${config:deckip} -p ${config:deckport} ${config:deckkey} 'echo '${config:deckpass}' | sudo -S chmod -R ug+rw ${config:deckdir}/homebrew/plugins/'",
             "problemMatcher": []
-        },
+        }, {
+            "label": "misc:restart-decky",
+            "detail": "Restarts decky plugin-loader",
+            "type": "shell",
+            "group": "none",
+            "command": "ssh ${config:deckuser}@${config:deckip} -p ${config:deckport} ${config:deckkey} 'echo ${config:deckpass} | sudo -S systemctl restart plugin_loader.service'",
+            "problemMatcher": []
+        }, {
+            "label": "misc:check-settings",
+            "detail": "Checks that settings.json has been created",
+            "type": "shell",
+            "group": "none",
+            "command": "${workspaceFolder}/.vscode/config.sh",
+            "problemMatcher": []
+        }, {
+            "label": "aio:build-deploy",
+            "detail": "Builds plugin, deploys to deck",
+            "dependsOrder": "sequence",
+            "group": "build",
+            "dependsOn": [
+                "dev:build",
+                "dev:deploy"
+            ],
+            "problemMatcher": []
+        }, {
+            "label": "aio:buid-deploy-restart",
+            "detail": "Builds plugin, deploys to deck and restarts deck",
+            "dependsOrder": "sequence",
+            "group": "build",
+            "dependsOn": [
+                "dev:build",
+                "dev:deploy",
+                "misc:restart-decky"
+            ],
+            "problemMatcher": []
+        }
     ]
 }
+// {
+//     "version": "2.0.0",
+//     "tasks": [
+//         //Preliminary "All-in-one" setup task
+//         {
+//             "label": "setup",
+//             "detail": "Set up depedencies, pnpm and update Decky Frontend Library.",
+//             "dependsOrder": "sequence",
+//             "dependsOn": [
+//                 "depsetup",
+//                 "pnpmsetup",
+//                 "updatefrontendlib"
+//             ],
+//             "problemMatcher": []
+//         },
+//         //Preliminary Deploy Config Setup
+//         {
+//             "label": "settingscheck",
+//             "type": "shell",
+//             "group": "none",
+//             "detail": "Check that settings.json has been created",
+//             "command": "${workspaceFolder}/.vscode/config.sh",
+//             // // placeholder for windows scripts, not currently planned
+//             // "windows": {
+//             //     "command": "call ${workspaceFolder}\\.vscode\\config.bat",
+//             // },
+//             "problemMatcher": []
+//         },
+//         //BUILD TASKS
+//         {
+//             "label": "cli-build",
+//             "group": "build",
+//             "detail": "Build plugin with CLI",
+//             "command": "${workspaceFolder}/.vscode/build.sh",
+//             // // placeholder for windows logic, not currently planned
+//             // "windows": {
+//             //     "command": "call ${workspaceFolder}\\.vscode\\build.bat",
+//             // },
+//             "problemMatcher": []
+//         },
+//         //"All-in-one" build task
+//         {
+//             "label": "build",
+//             "group": "build",
+//             "detail": "Build decky-plugin-template",
+//             "dependsOrder": "sequence",
+//             "dependsOn": [
+//                 "setup",
+//                 "settingscheck",
+//                 "cli-build",
+//             ],
+//             "problemMatcher": []
+//         },
+//         //DEPLOY TASKS
+//         //Copies the zip file of the built plugin to the plugins folder
+//         {
+//             "label": "copyzip",
+//             "detail": "Deploy plugin zip to tmp in deck",
+//             "type": "shell",
+//             "group": "none",
+//             "dependsOn": [
+//                 "chmodplugins"
+//             ],
+//             "command": "rsync -azp --chmod=D0755,F0755 --rsh='ssh -p ${config:deckport} ${config:deckkey}' out/ ${config:deckuser}@${config:deckip}:/tmp/plugins-tmp",
+//             "problemMatcher": []
+//         },
+//         {
+//             "label": "movetoplugins",
+//             "detail": "Move plugin zip from tmp to plugins in deck",
+//             "type": "shell",
+//             "group": "none",
+//             "dependsOn": [
+//                 "copyzip"
+//             ],
+//             "command": "ssh -p ${config:deckport} ${config:deckkey} ${config:deckuser}@${config:deckip} \"echo ${config:deckpass} | sudo -S mkdir -p '${config:deckdir}/homebrew/plugins' && echo ${config:deckpass} | sudo -S mv /tmp/plugins-tmp/* '${config:deckdir}/homebrew/plugins/'\"",
+//             "problemMatcher": []
+//         },
+//         //
+//         {
+//             "label": "extractzip",
+//             "detail": "",
+//             "type": "shell",
+//             "group": "none",
+//             "command": "echo '${config:deckdir}/homebrew/plugins/${config:pluginname}.zip' && ssh ${config:deckuser}@${config:deckip} -p ${config:deckport} ${config:deckkey} 'echo ${config:deckpass} | sudo -S mkdir -m 755 -p \"$(echo \"${config:deckdir}/homebrew/plugins/${config:pluginname}\" | sed \"s| |-|g\")\" && echo ${config:deckpass} | sudo -S chown ${config:deckuser}:${config:deckuser} \"$(echo \"${config:deckdir}/homebrew/plugins/${config:pluginname}\" | sed \"s| |-|g\")\" && echo ${config:deckpass} | sudo -S bsdtar -xzpf \"${config:deckdir}/homebrew/plugins/${config:pluginname}.zip\" -C \"$(echo \"${config:deckdir}/homebrew/plugins/${config:pluginname}\" | sed \"s| |-|g\")\" --strip-components=1 --fflags '",
+//             "problemMatcher": []
+//         },
+//         {
+//             "label": "removezip",
+//             "detail": "Remove plugin zip from deck",
+//             "type": "shell",
+//             "group": "none",
+//             "command": "echo '${config:deckdir}/homebrew/plugins/${config:pluginname}.zip' && ssh ${config:deckuser}@${config:deckip} -p ${config:deckport} ${config:deckkey} 'echo ${config:deckpass} | sudo -S rm -f \"${config:deckdir}/homebrew/plugins/${config:pluginname}.zip\"'",
+//             "problemMatcher": []
+//         },
+    
+//     ]
+// }

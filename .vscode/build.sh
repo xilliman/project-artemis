@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-CLI_LOCATION="$(pwd)/cli"
+# CLI_LOCATION="$(pwd)/cli"
+CLI_LOCATION="/usr/local/bin"
 echo "Building plugin in $(pwd)"
 printf "Please input sudo password to proceed.\n"
 
