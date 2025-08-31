@@ -5,20 +5,28 @@ import {
   Navigation,
   ToggleField,
   staticClasses,
-  SliderField
+  SliderField,
+  Router,
+  DialogCheckbox,
+  showModal,
+  ConfirmModal
 } from "@decky/ui";
+
+
 import {
   addEventListener,
   removeEventListener,
   callable,
   definePlugin,
   toaster,
+  routerHook
   // routerHook
 } from "@decky/api"
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 
 import { FaMusic } from "react-icons/fa";
+import { debug } from "./utils/debug";
 
 // // import logo from "../assets/logo.png";
 
@@ -112,13 +120,54 @@ import { FaMusic } from "react-icons/fa";
 
 type Prefs = { shuffle: boolean, volume: number }
 
+const unpatch = routerHook.addPatch("/appdetails/:appid", (route) => {
+  toaster.toast({ title: "Debug", body: `${route}`})
+})
+
+function registerGameStartListener() {
+  const SC = (window as any).SteamClient
+
+  console.log(SC)
+
+  if (!SC) {
+  }
+  
+  
+}
+
+function parseAppId(pathname: string): number | null {
+  const m = pathname.match(/\/library\/app\/(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function getAppName(appId: number | null): string {
+  // const SC = (window as any).SteamClient;
+  
+  // if (!SC) {
+  //   toaster.toast({title: "Debug", body: "Steam Client not found"})
+  //   return ""
+  // }
+
+  return "foobar"
+}
+
 export default definePlugin(() => {
 
+  // useEffect(() => {
+  //   toaster.toast({title: "debug", body: "useEffect"})
+  // }, []);
+
   // const [state, setState] = useState<Prefs>({ shuffle: false, volume: 19 })
+
+  registerGameStartListener()
+
+  console.log("Foobar")
+
 
   return {
     // The name shown in various decky menus
     name: "Test Plugin",
+
     // The element displayed at the top of your plugin's menu
     titleView: <div className={staticClasses.Title}>project-artemis IV</div>,
     // The content of your plugin's menu
@@ -127,9 +176,9 @@ export default definePlugin(() => {
         <PanelSection title="Einstellungen">
           <PanelSectionRow>
             <ToggleField label="Shuffle" 
-              // checked={state.shuffle} 
+              checked={false} 
               description="Automatically shuffle OSTs" 
-              // onChange={(b) => setState(p => ({...p, shuffle: b}))}
+              onChange={(b) => registerGameStartListener()}
               />
           </PanelSectionRow>
           <PanelSectionRow>

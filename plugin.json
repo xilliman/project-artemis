@@ -1,6 +1,6 @@
 {
   "name": "project-artemis",
-  "author": "John Doe",
+  "author": "Maximilian Kuhlmay",
   "flags": ["debug", "_root"],
   "api_version": 1,
   "publish": {
